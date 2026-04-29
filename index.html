@@ -1,0 +1,858 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Loan Eligibility Simulator</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --ink: #0f1a12;
+      --ink-2: #3a4a3d;
+      --ink-3: #6b7a6e;
+      --paper: #f4f1ea;
+      --paper-2: #ede9e0;
+      --paper-3: #e4dfd3;
+      --green: #1e6641;
+      --green-light: #d4ead9;
+      --amber: #a05c00;
+      --amber-light: #faebd0;
+      --red: #8f2020;
+      --red-light: #fae0e0;
+      --blue: #1a3d6e;
+      --blue-light: #dce6f5;
+      --accent: #1e6641;
+      --border: rgba(15,26,18,0.12);
+      --border-strong: rgba(15,26,18,0.22);
+      --radius: 4px;
+      --radius-lg: 8px;
+      --shadow: 0 2px 12px rgba(15,26,18,0.08);
+      --shadow-lg: 0 8px 32px rgba(15,26,18,0.12);
+    }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--paper);
+      color: var(--ink);
+      font-size: 15px;
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+
+    /* Layout */
+    .page { max-width: 800px; margin: 0 auto; padding: 3rem 1.5rem 4rem; }
+
+    /* Header */
+    .site-header { margin-bottom: 3rem; padding-bottom: 2rem; border-bottom: 1px solid var(--border-strong); }
+    .site-header h1 {
+      font-family: 'DM Serif Display', serif;
+      font-size: 36px;
+      font-weight: 400;
+      color: var(--ink);
+      line-height: 1.2;
+      letter-spacing: -0.5px;
+    }
+    .site-header p { font-size: 15px; color: var(--ink-3); margin-top: 8px; max-width: 520px; }
+    .header-badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-size: 11px; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase;
+      color: var(--green); background: var(--green-light);
+      padding: 4px 10px; border-radius: 20px; margin-bottom: 12px;
+    }
+    .header-badge::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: var(--green); }
+
+    /* API Key bar */
+    .api-bar {
+      background: var(--paper-2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 14px 16px;
+      margin-bottom: 2rem;
+      display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+    }
+    .api-bar label { font-size: 13px; font-weight: 500; color: var(--ink-2); white-space: nowrap; }
+    .api-bar input {
+      flex: 1; min-width: 200px;
+      font-family: 'DM Mono', monospace;
+      font-size: 13px;
+      padding: 7px 10px;
+      border: 1px solid var(--border-strong);
+      border-radius: var(--radius);
+      background: var(--paper);
+      color: var(--ink);
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    .api-bar input:focus { border-color: var(--accent); }
+    .api-bar a { font-size: 12px; color: var(--green); text-decoration: none; white-space: nowrap; }
+    .api-bar a:hover { text-decoration: underline; }
+
+    /* Sections */
+    .form-section { margin-bottom: 2rem; }
+    .section-label {
+      font-size: 11px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase;
+      color: var(--ink-3); margin-bottom: 1rem;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .section-label::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+    .field-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    @media (max-width: 540px) { .field-grid { grid-template-columns: 1fr; } }
+
+    .field { display: flex; flex-direction: column; gap: 6px; }
+    .field label { font-size: 12px; font-weight: 500; color: var(--ink-2); letter-spacing: 0.01em; }
+
+    input[type=number], select {
+      width: 100%; padding: 9px 11px;
+      font-family: 'DM Sans', sans-serif; font-size: 14px;
+      color: var(--ink); background: var(--paper);
+      border: 1px solid var(--border-strong); border-radius: var(--radius);
+      outline: none; transition: border-color 0.15s, box-shadow 0.15s;
+      appearance: auto;
+    }
+    input[type=number]:focus, select:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(30,102,65,0.12);
+    }
+
+    /* Credit slider */
+    .slider-wrap { display: flex; align-items: center; gap: 10px; }
+    .slider-wrap input[type=range] { flex: 1; accent-color: var(--accent); cursor: pointer; }
+    .slider-wrap .tick { font-size: 11px; color: var(--ink-3); }
+    #credit_out {
+      font-family: 'DM Mono', monospace; font-size: 14px; font-weight: 500;
+      color: var(--green);
+    }
+
+    /* Submit */
+    .submit-btn {
+      width: 100%; margin-top: 2rem; padding: 13px 20px;
+      font-family: 'DM Sans', sans-serif; font-size: 15px; font-weight: 600;
+      color: var(--paper); background: var(--ink);
+      border: none; border-radius: var(--radius);
+      cursor: pointer; letter-spacing: 0.01em;
+      transition: background 0.15s, transform 0.1s;
+    }
+    .submit-btn:hover { background: var(--green); }
+    .submit-btn:active { transform: scale(0.99); }
+
+    /* Results wrapper */
+    .results { display: none; margin-top: 3rem; }
+
+    /* Two-thirds banner */
+    .tf-banner {
+      border-radius: var(--radius-lg); padding: 14px 16px;
+      display: flex; align-items: flex-start; gap: 12px;
+      margin-bottom: 1.5rem;
+      border-left: 4px solid;
+    }
+    .tf-banner.pass { background: var(--green-light); border-color: var(--green); }
+    .tf-banner.fail { background: var(--red-light); border-color: var(--red); }
+    .tf-icon {
+      width: 22px; height: 22px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 12px; font-weight: 700; flex-shrink: 0; margin-top: 1px;
+    }
+    .pass .tf-icon { background: var(--green); color: #fff; }
+    .fail .tf-icon { background: var(--red); color: #fff; }
+    .tf-text { font-size: 13px; line-height: 1.6; }
+    .pass .tf-text { color: var(--green); }
+    .fail .tf-text { color: var(--red); }
+
+    /* Verdict */
+    .verdict-row { display: flex; align-items: center; gap: 14px; margin-bottom: 1.5rem; flex-wrap: wrap; }
+    .verdict-badge {
+      font-size: 12px; font-weight: 600; padding: 5px 14px;
+      border-radius: 20px; letter-spacing: 0.03em; white-space: nowrap;
+    }
+    .verdict-score {
+      font-family: 'DM Serif Display', serif;
+      font-size: 22px; font-weight: 400; color: var(--ink);
+    }
+
+    /* Score bar */
+    .score-bar-wrap { margin-bottom: 1.5rem; }
+    .score-bar-header { display: flex; justify-content: space-between; font-size: 13px; color: var(--ink-3); margin-bottom: 7px; }
+    .score-bar-header span:last-child { font-family: 'DM Mono', monospace; font-weight: 500; color: var(--ink); }
+    .bar-track { height: 8px; background: var(--paper-3); border-radius: 8px; overflow: hidden; }
+    .bar-fill { height: 100%; border-radius: 8px; transition: width 0.6s cubic-bezier(0.34,1.56,0.64,1); }
+    .bar-ticks { display: flex; justify-content: space-between; font-size: 11px; color: var(--ink-3); margin-top: 5px; }
+
+    /* Metrics */
+    .metrics-grid { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 10px; margin-bottom: 1.5rem; }
+    @media (max-width: 540px) { .metrics-grid { grid-template-columns: 1fr 1fr; } }
+    .metric {
+      background: var(--paper-2); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); padding: 12px 14px;
+    }
+    .metric-label { font-size: 11px; font-weight: 500; color: var(--ink-3); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 4px; }
+    .metric-value { font-family: 'DM Mono', monospace; font-size: 16px; font-weight: 500; color: var(--ink); }
+
+    /* Allocation bar */
+    .alloc-wrap { margin-bottom: 1.5rem; }
+    .alloc-label { font-size: 12px; color: var(--ink-3); margin-bottom: 6px; font-weight: 500; }
+    .alloc-track { height: 22px; background: var(--paper-3); border-radius: var(--radius); overflow: hidden; display: flex; }
+    .alloc-seg { height: 100%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 600; color: #fff; transition: width 0.5s ease; }
+    .alloc-legend { display: flex; gap: 16px; margin-top: 8px; flex-wrap: wrap; }
+    .legend-item { display: flex; align-items: center; gap: 5px; font-size: 12px; color: var(--ink-3); }
+    .legend-swatch { width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0; }
+
+    /* Factors */
+    .factors-heading { font-size: 11px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-3); margin: 1.5rem 0 10px; }
+    .factor { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 9px; }
+    .factor-pip { width: 7px; height: 7px; border-radius: 50%; margin-top: 6px; flex-shrink: 0; }
+    .factor-text { font-size: 13px; color: var(--ink-2); line-height: 1.55; }
+    .factor-text strong { color: var(--ink); font-weight: 600; }
+
+    /* Divider */
+    .divider { height: 1px; background: var(--border); margin: 2rem 0; }
+
+    /* Projections */
+    .proj-heading {
+      font-family: 'DM Serif Display', serif;
+      font-size: 22px; font-weight: 400; margin-bottom: 1rem; color: var(--ink);
+    }
+    .proj-grid { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 10px; margin-bottom: 1rem; }
+    @media (max-width: 540px) { .proj-grid { grid-template-columns: 1fr; } }
+    .proj-card {
+      background: var(--paper-2); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); padding: 12px 14px;
+    }
+    .proj-card-label { font-size: 11px; font-weight: 500; color: var(--ink-3); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 4px; }
+    .proj-card-value { font-family: 'DM Mono', monospace; font-size: 16px; font-weight: 500; color: var(--ink); }
+    .proj-card-sub { font-size: 11px; color: var(--ink-3); margin-top: 3px; }
+
+    /* AI Report */
+    .ai-section { margin-top: 2rem; }
+    .ai-heading {
+      font-family: 'DM Serif Display', serif;
+      font-size: 22px; font-weight: 400; margin-bottom: 0.5rem; color: var(--ink);
+      display: flex; align-items: center; gap: 10px;
+    }
+    .ai-badge {
+      font-family: 'DM Sans', sans-serif;
+      font-size: 10px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase;
+      background: var(--green); color: #fff;
+      padding: 3px 8px; border-radius: 20px;
+    }
+    .ai-subheading { font-size: 13px; color: var(--ink-3); margin-bottom: 1rem; }
+
+    .ai-generate-btn {
+      display: flex; align-items: center; gap: 8px;
+      padding: 10px 18px; font-family: 'DM Sans', sans-serif;
+      font-size: 14px; font-weight: 500;
+      color: var(--green); background: var(--green-light);
+      border: 1px solid rgba(30,102,65,0.25); border-radius: var(--radius);
+      cursor: pointer; transition: background 0.15s;
+    }
+    .ai-generate-btn:hover { background: #c2dfc9; }
+    .ai-generate-btn svg { width: 16px; height: 16px; }
+
+    .ai-report-box {
+      display: none; margin-top: 1rem;
+      background: var(--paper-2); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); padding: 1.5rem;
+    }
+    .ai-loading {
+      display: flex; align-items: center; gap: 10px;
+      font-size: 14px; color: var(--ink-3); padding: 1rem 0;
+    }
+    .ai-spinner {
+      width: 18px; height: 18px; border: 2px solid var(--border-strong);
+      border-top-color: var(--green); border-radius: 50%;
+      animation: spin 0.8s linear infinite; flex-shrink: 0;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .ai-report-content { font-size: 14px; color: var(--ink-2); line-height: 1.75; display: none; }
+    .ai-report-content h3 {
+      font-family: 'DM Serif Display', serif; font-size: 17px;
+      font-weight: 400; color: var(--ink); margin: 1.25rem 0 6px;
+    }
+    .ai-report-content h3:first-child { margin-top: 0; }
+    .ai-report-content p { margin-bottom: 0.75rem; }
+    .ai-report-content ul { padding-left: 1.25rem; margin-bottom: 0.75rem; }
+    .ai-report-content li { margin-bottom: 4px; }
+    .ai-report-content strong { color: var(--ink); font-weight: 600; }
+    .ai-report-content .verdict-line {
+      display: inline-block;
+      font-size: 13px; font-weight: 600; padding: 4px 12px;
+      border-radius: 20px; margin-bottom: 1rem;
+    }
+    .ai-error {
+      font-size: 13px; color: var(--red); background: var(--red-light);
+      padding: 10px 14px; border-radius: var(--radius); display: none;
+    }
+
+    /* Disclaimer */
+    .disclaimer {
+      margin-top: 2rem; padding-top: 1.5rem;
+      border-top: 1px solid var(--border);
+      font-size: 12px; color: var(--ink-3); line-height: 1.7;
+    }
+
+    footer {
+      text-align: center; margin-top: 3rem;
+      font-size: 12px; color: var(--ink-3); letter-spacing: 0.05em;
+    }
+  </style>
+</head>
+<body>
+<div class="page">
+
+  <header class="site-header">
+    <div class="header-badge">AI-Powered</div>
+    <h1>Loan Eligibility Simulator</h1>
+    <p>Creditworthiness assessment with two-thirds rule enforcement, lender projections, and AI-generated credit reports.</p>
+  </header>
+
+  <!-- API Key -->
+  <div class="api-bar">
+    <label>🔑 Groq API Key</label>
+    <input type="password" id="api_key" placeholder="Paste your Groq API key here…" />
+    <a href="https://console.groq.com/keys" target="_blank">Get a free key →</a>
+  </div>
+
+  <!-- Personal & Employment -->
+  <div class="form-section">
+    <div class="section-label">Personal &amp; Employment</div>
+    <div class="field-grid">
+      <div class="field">
+        <label>Employment status</label>
+        <select id="employment">
+          <option value="full">Full-time employed</option>
+          <option value="self">Self-employed</option>
+          <option value="part">Part-time employed</option>
+          <option value="unemployed">Unemployed</option>
+          <option value="retired">Retired</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Years at current job</label>
+        <select id="job_years">
+          <option value="0">Less than 1 year</option>
+          <option value="1">1–2 years</option>
+          <option value="2" selected>2–5 years</option>
+          <option value="3">5+ years</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Monthly net income (KES)</label>
+        <input type="number" id="income" value="100000" min="0" step="5000" />
+      </div>
+      <div class="field">
+        <label>Monthly existing debt payments (KES)</label>
+        <input type="number" id="existing_debt" value="15000" min="0" step="1000" />
+      </div>
+    </div>
+  </div>
+
+  <!-- Loan Details -->
+  <div class="form-section">
+    <div class="section-label">Loan Details</div>
+    <div class="field-grid">
+      <div class="field">
+        <label>Loan amount (KES)</label>
+        <input type="number" id="loan_amount" value="500000" min="10000" step="10000" />
+      </div>
+      <div class="field">
+        <label>Loan purpose</label>
+        <select id="loan_purpose">
+          <option value="home">Home purchase</option>
+          <option value="auto">Vehicle / auto</option>
+          <option value="business" selected>Business</option>
+          <option value="education">Education</option>
+          <option value="personal">Personal</option>
+          <option value="medical">Medical</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Loan term</label>
+        <select id="loan_term">
+          <option value="12">12 months</option>
+          <option value="24">24 months</option>
+          <option value="36" selected>36 months</option>
+          <option value="48">48 months</option>
+          <option value="60">60 months</option>
+          <option value="84">84 months</option>
+          <option value="120">120 months</option>
+          <option value="180">180 months</option>
+          <option value="240">240 months</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Interest rate (% p.a.)</label>
+        <input type="number" id="interest_rate" value="14" min="1" max="40" step="0.5" />
+      </div>
+      <div class="field">
+        <label>Cost of funds (% p.a.)</label>
+        <input type="number" id="cost_of_funds" value="7" min="0" max="30" step="0.5" />
+      </div>
+      <div class="field">
+        <label>Expected default rate (%)</label>
+        <input type="number" id="default_rate" value="3" min="0" max="30" step="0.5" />
+      </div>
+    </div>
+  </div>
+
+  <!-- Credit & Assets -->
+  <div class="form-section">
+    <div class="section-label">Credit &amp; Assets</div>
+    <div class="field" style="margin-bottom:14px;">
+      <label>Credit score — <span id="credit_out">680</span></label>
+      <div class="slider-wrap">
+        <span class="tick">300</span>
+        <input type="range" id="credit_score" min="300" max="850" step="5" value="680"
+          oninput="document.getElementById('credit_out').textContent=this.value" />
+        <span class="tick">850</span>
+      </div>
+    </div>
+    <div class="field-grid">
+      <div class="field">
+        <label>Total savings / assets (KES)</label>
+        <input type="number" id="assets" value="300000" min="0" step="10000" />
+      </div>
+      <div class="field">
+        <label>Collateral available?</label>
+        <select id="collateral">
+          <option value="yes">Yes</option>
+          <option value="no" selected>No</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Previous loan defaults?</label>
+        <select id="defaults">
+          <option value="no" selected>No</option>
+          <option value="resolved">Yes, resolved</option>
+          <option value="active">Yes, still active</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Number of dependants</label>
+        <select id="dependants">
+          <option value="0" selected>0</option>
+          <option value="1">1</option>
+          <option value="2">2</option>
+          <option value="3">3</option>
+          <option value="4">4+</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <button class="submit-btn" onclick="calculate()">Run eligibility assessment</button>
+
+  <!-- ===== RESULTS ===== -->
+  <div class="results" id="results">
+
+    <!-- Two-thirds banner -->
+    <div class="tf-banner" id="tf_banner">
+      <div class="tf-icon" id="tf_icon"></div>
+      <div class="tf-text" id="tf_text"></div>
+    </div>
+
+    <!-- Verdict -->
+    <div class="verdict-row">
+      <span class="verdict-badge" id="verdict_badge"></span>
+      <span class="verdict-score" id="verdict_score"></span>
+    </div>
+
+    <!-- Score bar -->
+    <div class="score-bar-wrap">
+      <div class="score-bar-header">
+        <span>Creditworthiness score</span>
+        <span id="score_display"></span>
+      </div>
+      <div class="bar-track"><div class="bar-fill" id="bar_fill"></div></div>
+      <div class="bar-ticks"><span>Poor</span><span>Fair (35)</span><span>Good (55)</span><span>Excellent (75+)</span></div>
+    </div>
+
+    <!-- Metrics -->
+    <div class="metrics-grid">
+      <div class="metric"><div class="metric-label">Monthly payment</div><div class="metric-value" id="m_payment">—</div></div>
+      <div class="metric"><div class="metric-label">DTI ratio</div><div class="metric-value" id="m_dti">—</div></div>
+      <div class="metric"><div class="metric-label">Retained (⅓ rule)</div><div class="metric-value" id="m_retained">—</div></div>
+    </div>
+
+    <!-- Allocation bar -->
+    <div class="alloc-wrap">
+      <div class="alloc-label">Monthly income allocation</div>
+      <div class="alloc-track" id="alloc_track"></div>
+      <div class="alloc-legend" id="alloc_legend"></div>
+    </div>
+
+    <!-- Factors -->
+    <div class="factors-heading">Decision factors</div>
+    <div id="factors_list"></div>
+
+    <div class="divider"></div>
+
+    <!-- Lender Projections -->
+    <div class="proj-heading">Lender Return Projections</div>
+    <div class="proj-grid" id="proj_grid"></div>
+    <div class="alloc-wrap" style="margin-top:0.5rem;">
+      <div class="alloc-label">Total repayment breakdown</div>
+      <div class="alloc-track" id="amort_track"></div>
+      <div class="alloc-legend" id="amort_legend"></div>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- AI Report -->
+    <div class="ai-section">
+      <div class="ai-heading">
+        AI Credit Report <span class="ai-badge">Groq · Llama 3</span>
+      </div>
+      <p class="ai-subheading">Generate a detailed, human-readable credit assessment written by AI based on this applicant's data.</p>
+      <button class="ai-generate-btn" id="ai_btn" onclick="generateAIReport()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/>
+        </svg>
+        Generate AI Credit Report
+      </button>
+
+      <div class="ai-report-box" id="ai_report_box">
+        <div class="ai-loading" id="ai_loading">
+          <div class="ai-spinner"></div>
+          Analysing applicant data with Groq…
+        </div>
+        <div class="ai-error" id="ai_error"></div>
+        <div class="ai-report-content" id="ai_report_content"></div>
+      </div>
+    </div>
+
+    <div class="disclaimer">
+      This simulator provides an indicative assessment only and does not constitute a formal credit offer.
+      Actual loan decisions are subject to lender policies, regulatory requirements, and additional due diligence.
+      The AI credit report is generated by Groq (Llama 3) and is for informational purposes only.
+    </div>
+  </div>
+
+  <footer>Loan Eligibility Simulator &mdash; Internal Use Only</footer>
+</div>
+
+<script>
+  const fmt = n => 'KES ' + Math.round(n).toLocaleString();
+
+  // Store last computed data for AI report
+  let lastData = null;
+
+  function calculate() {
+    const monthlyIncome  = parseFloat(document.getElementById('income').value) || 0;
+    const loanAmt        = parseFloat(document.getElementById('loan_amount').value) || 0;
+    const termMonths     = parseInt(document.getElementById('loan_term').value);
+    const annualRate     = parseFloat(document.getElementById('interest_rate').value);
+    const rate           = annualRate / 100 / 12;
+    const creditScore    = parseInt(document.getElementById('credit_score').value);
+    const existingDebt   = parseFloat(document.getElementById('existing_debt').value) || 0;
+    const assets         = parseFloat(document.getElementById('assets').value) || 0;
+    const employment     = document.getElementById('employment').value;
+    const jobYears       = parseInt(document.getElementById('job_years').value);
+    const collateral     = document.getElementById('collateral').value;
+    const defaults       = document.getElementById('defaults').value;
+    const purpose        = document.getElementById('loan_purpose').value;
+    const costOfFunds    = parseFloat(document.getElementById('cost_of_funds').value) / 100;
+    const defaultRate    = parseFloat(document.getElementById('default_rate').value) / 100;
+    const annualIncome   = monthlyIncome * 12;
+
+    const monthlyPayment = rate > 0
+      ? loanAmt * (rate * Math.pow(1+rate,termMonths)) / (Math.pow(1+rate,termMonths)-1)
+      : loanAmt / termMonths;
+
+    const totalDebt = existingDebt + monthlyPayment;
+    const dti = monthlyIncome > 0 ? totalDebt / monthlyIncome : 1;
+    const lti = annualIncome > 0 ? loanAmt / annualIncome : 99;
+
+    // Two-thirds rule
+    const oneThird = monthlyIncome / 3;
+    const twoThirds = monthlyIncome * 2 / 3;
+    const retained = monthlyIncome - totalDebt;
+    const tfPassed = retained >= oneThird;
+    const maxNewPayment = Math.max(0, twoThirds - existingDebt);
+
+    // Scoring
+    let score = 0;
+    const factors = [];
+
+    if (tfPassed) {
+      score += 20;
+      factors.push({t:'positive', msg:'<strong>Two-thirds rule: PASSED</strong> — retains ' + fmt(retained) + '/mo (' + Math.round((retained/monthlyIncome)*100) + '%) after all deductions'});
+    } else {
+      factors.push({t:'negative', msg:'<strong>Two-thirds rule: FAILED</strong> — retains only ' + fmt(Math.max(0,retained)) + '/mo. Min required: ' + fmt(oneThird) + '. Max new payment allowed: ' + fmt(maxNewPayment)});
+    }
+
+    if      (creditScore>=750) { score+=25; factors.push({t:'positive', msg:'<strong>Excellent credit score</strong> ('+creditScore+') — strong repayment history signal'}); }
+    else if (creditScore>=680) { score+=18; factors.push({t:'positive', msg:'<strong>Good credit score</strong> ('+creditScore+') — acceptable risk profile'}); }
+    else if (creditScore>=580) { score+=10; factors.push({t:'neutral',  msg:'<strong>Fair credit score</strong> ('+creditScore+') — some lenders may require higher rates'}); }
+    else                       { score+=2;  factors.push({t:'negative', msg:'<strong>Low credit score</strong> ('+creditScore+') — significant eligibility risk'}); }
+
+    if      (dti<=0.30) { score+=20; factors.push({t:'positive', msg:'<strong>Healthy DTI of '+Math.round(dti*100)+'%</strong> — well within the 30% threshold'}); }
+    else if (dti<=0.43) { score+=12; factors.push({t:'neutral',  msg:'<strong>Moderate DTI of '+Math.round(dti*100)+'%</strong> — approaching lender limits'}); }
+    else if (dti<=0.55) { score+=4;  factors.push({t:'negative', msg:'<strong>High DTI of '+Math.round(dti*100)+'%</strong> — debt load is high relative to income'}); }
+    else                { score+=0;  factors.push({t:'negative', msg:'<strong>Very high DTI of '+Math.round(dti*100)+'%</strong> — most lenders decline above 55%'}); }
+
+    const empMap = {full:12,self:7,part:5,retired:9,unemployed:0};
+    score += empMap[employment];
+    if (employment==='unemployed') factors.push({t:'negative', msg:'<strong>No employment income</strong> — most lenders require active income'});
+    else if (employment==='self')  factors.push({t:'neutral',  msg:'<strong>Self-employed</strong> — may need additional income documentation'});
+    else if (employment==='retired') factors.push({t:'positive', msg:'<strong>Retired with stable pension</strong> — predictable income'});
+
+    const tenureMap = {0:1,1:4,2:6,3:8};
+    score += tenureMap[jobYears];
+    if (jobYears===0) factors.push({t:'negative', msg:'<strong>Less than 1 year at current job</strong> — short tenure increases risk perception'});
+    else if (jobYears===3) factors.push({t:'positive', msg:'<strong>5+ years with current employer</strong> — strong employment stability'});
+
+    if      (defaults==='no')       { score+=10; }
+    else if (defaults==='resolved') { score+=4; factors.push({t:'neutral',  msg:'<strong>Past default (resolved)</strong> — noted; resolution is a positive sign'}); }
+    else                            { score+=0; factors.push({t:'negative', msg:'<strong>Active loan default</strong> — major red flag for lenders'}); }
+
+    if (collateral==='yes') { score+=3; factors.push({t:'positive', msg:'<strong>Collateral available</strong> — reduces lender exposure'}); }
+    const assetRatio = annualIncome>0 ? assets/annualIncome : 0;
+    if (assetRatio>=0.5) { score+=2; factors.push({t:'positive', msg:'<strong>Strong asset base</strong> — savings at '+Math.round(assetRatio*100)+'% of annual income'}); }
+
+    if      (lti>5)  factors.push({t:'negative', msg:'<strong>High loan-to-income of '+lti.toFixed(1)+'x</strong> — large loan relative to earnings'});
+    else if (lti<=2) factors.push({t:'positive', msg:'<strong>Conservative loan-to-income of '+lti.toFixed(1)+'x</strong> — well-sized for income'});
+
+    if (purpose==='home')      score = Math.min(100, score+2);
+    if (purpose==='education') score = Math.min(100, score+1);
+    score = Math.min(100, Math.max(0, score));
+
+    // Verdict
+    let verdict, badgeBg, badgeColor, barColor;
+    if (!tfPassed)    { verdict='Ineligible — two-thirds rule fail'; badgeBg=getComputedStyle(document.documentElement).getPropertyValue('--red-light').trim(); badgeColor='#8f2020'; barColor='#c0392b'; }
+    else if (score>=75) { verdict='Likely eligible';                  badgeBg='#d4ead9'; badgeColor='#1e6641'; barColor='#1e6641'; }
+    else if (score>=55) { verdict='Conditionally eligible';           badgeBg='#faebd0'; badgeColor='#a05c00'; barColor='#d4820a'; }
+    else if (score>=35) { verdict='Higher risk — review needed';      badgeBg='#fce8e0'; badgeColor='#8f3020'; barColor='#c0522b'; }
+    else                { verdict='Likely ineligible';                badgeBg='#fae0e0'; badgeColor='#8f2020'; barColor='#c0392b'; }
+
+    // Two-thirds banner
+    const banner = document.getElementById('tf_banner');
+    banner.className = 'tf-banner ' + (tfPassed ? 'pass' : 'fail');
+    document.getElementById('tf_icon').textContent = tfPassed ? '✓' : '✗';
+    document.getElementById('tf_text').innerHTML = tfPassed
+      ? '<strong>Two-thirds rule: PASSED.</strong> After all deductions, the borrower retains <strong>'+fmt(retained)+'/mo</strong> ('+Math.round((retained/monthlyIncome)*100)+'%). Minimum required: <strong>'+fmt(oneThird)+'</strong>.'
+      : '<strong>Two-thirds rule: FAILED.</strong> Borrower retains only <strong>'+fmt(Math.max(0,retained))+'/mo</strong>. Minimum required: <strong>'+fmt(oneThird)+'</strong>. Maximum allowable new loan payment: <strong>'+fmt(maxNewPayment)+'/mo</strong>.';
+
+    document.getElementById('verdict_badge').textContent = verdict;
+    document.getElementById('verdict_badge').style.cssText = 'background:'+badgeBg+';color:'+badgeColor;
+    document.getElementById('verdict_score').textContent = 'Score: '+score+' / 100';
+    document.getElementById('score_display').textContent = score+' / 100';
+    document.getElementById('bar_fill').style.width = score+'%';
+    document.getElementById('bar_fill').style.background = barColor;
+
+    document.getElementById('m_payment').textContent = fmt(monthlyPayment);
+    document.getElementById('m_dti').textContent = Math.round(dti*100)+'%';
+    document.getElementById('m_retained').innerHTML = '<span style="color:'+(tfPassed?'#1e6641':'#8f2020')+'">'+fmt(retained)+'</span>';
+
+    // Allocation bar
+    const ep = Math.min(1, existingDebt/monthlyIncome);
+    const np = Math.min(1-ep, monthlyPayment/monthlyIncome);
+    const rp = Math.max(0, 1-ep-np);
+    document.getElementById('alloc_track').innerHTML =
+      '<div class="alloc-seg" style="width:'+Math.round(ep*100)+'%;background:#a05c00;">'+(ep>0.08?Math.round(ep*100)+'%':'')+'</div>'+
+      '<div class="alloc-seg" style="width:'+Math.round(np*100)+'%;background:#1a3d6e;">'+(np>0.08?Math.round(np*100)+'%':'')+'</div>'+
+      '<div class="alloc-seg" style="width:'+Math.round(rp*100)+'%;background:'+(rp>=0.333?'#1e6641':'#8f2020')+'">'+(rp>0.06?Math.round(rp*100)+'%':'')+'</div>';
+    document.getElementById('alloc_legend').innerHTML =
+      '<span class="legend-item"><span class="legend-swatch" style="background:#a05c00"></span>Existing debt</span>'+
+      '<span class="legend-item"><span class="legend-swatch" style="background:#1a3d6e"></span>New loan payment</span>'+
+      '<span class="legend-item"><span class="legend-swatch" style="background:'+(rp>=0.333?'#1e6641':'#8f2020')+'"></span>Retained (min ⅓ required)</span>';
+
+    // Factors
+    const fl = document.getElementById('factors_list');
+    fl.innerHTML='';
+    const dc = {positive:'#1e6641',neutral:'#a05c00',negative:'#8f2020'};
+    factors.forEach(f => {
+      fl.innerHTML+='<div class="factor"><div class="factor-pip" style="background:'+dc[f.t]+'"></div><div class="factor-text">'+f.msg+'</div></div>';
+    });
+
+    // Projections
+    const totalRepayment = monthlyPayment * termMonths;
+    const totalInterest  = totalRepayment - loanAmt;
+    const fundingCost    = loanAmt * costOfFunds * (termMonths/12);
+    const expectedLoss   = loanAmt * defaultRate;
+    const netIncome      = totalInterest - fundingCost - expectedLoss;
+    const roi            = loanAmt>0 ? (netIncome/loanAmt)*100 : 0;
+
+    function pCard(label,value,sub) {
+      return '<div class="proj-card"><div class="proj-card-label">'+label+'</div><div class="proj-card-value">'+value+'</div>'+(sub?'<div class="proj-card-sub">'+sub+'</div>':'')+'</div>';
+    }
+    document.getElementById('proj_grid').innerHTML =
+      pCard('Total repayment', fmt(totalRepayment), 'Principal + interest over full term') +
+      pCard('Total interest earned', fmt(totalInterest), 'Gross revenue from this loan') +
+      pCard('Funding cost', fmt(fundingCost), 'At '+(costOfFunds*100).toFixed(1)+'% cost of funds p.a.') +
+      pCard('Expected loss provision', fmt(expectedLoss), 'At '+(defaultRate*100).toFixed(1)+'% portfolio default rate') +
+      pCard('Net interest income', fmt(Math.max(0,netIncome)), netIncome<0?'⚠ Unprofitable at current assumptions':'After cost of funds and loss provision') +
+      pCard('Net return on loan', roi.toFixed(1)+'%', 'Over the full '+termMonths+'-month term');
+
+    const pp = Math.round((loanAmt/totalRepayment)*100);
+    const ip = Math.round((totalInterest/totalRepayment)*100);
+    document.getElementById('amort_track').innerHTML =
+      '<div class="alloc-seg" style="width:'+pp+'%;background:#1a3d6e;">'+(pp>8?pp+'%':'')+'</div>'+
+      '<div class="alloc-seg" style="width:'+ip+'%;background:#a05c00;">'+(ip>8?ip+'%':'')+'</div>';
+    document.getElementById('amort_legend').innerHTML =
+      '<span class="legend-item"><span class="legend-swatch" style="background:#1a3d6e"></span>Principal ('+fmt(loanAmt)+')</span>'+
+      '<span class="legend-item"><span class="legend-swatch" style="background:#a05c00"></span>Interest earned ('+fmt(totalInterest)+')</span>';
+
+    // Store for AI
+    lastData = {
+      monthlyIncome, annualIncome, loanAmt, termMonths, annualRate, creditScore,
+      existingDebt, assets, employment, jobYears, collateral, defaults, purpose,
+      monthlyPayment, totalDebt, dti, lti, retained, oneThird, tfPassed, maxNewPayment,
+      score, verdict, totalRepayment, totalInterest, fundingCost, expectedLoss, netIncome, roi,
+      costOfFunds: costOfFunds*100, defaultRate: defaultRate*100
+    };
+
+    // Reset AI report
+    document.getElementById('ai_report_box').style.display = 'none';
+    document.getElementById('ai_report_content').style.display = 'none';
+    document.getElementById('ai_report_content').innerHTML = '';
+    document.getElementById('ai_error').style.display = 'none';
+    document.getElementById('ai_btn').textContent = '';
+    document.getElementById('ai_btn').innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px;"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg> Generate AI Credit Report';
+
+    document.getElementById('results').style.display = 'block';
+    document.getElementById('results').scrollIntoView({behavior:'smooth', block:'start'});
+  }
+
+  async function generateAIReport() {
+    const apiKey = document.getElementById('api_key').value.trim();
+    if (!apiKey) {
+      alert('Please enter your Gemini API key at the top of the page.');
+      return;
+    }
+    if (!lastData) {
+      alert('Please run the eligibility assessment first.');
+      return;
+    }
+
+    const d = lastData;
+    const empLabels = {full:'Full-time employed', self:'Self-employed', part:'Part-time employed', unemployed:'Unemployed', retired:'Retired'};
+    const jobLabels = {0:'Less than 1 year', 1:'1–2 years', 2:'2–5 years', 3:'5+ years'};
+    const purposeLabels = {home:'Home purchase', auto:'Vehicle/auto', business:'Business', education:'Education', personal:'Personal', medical:'Medical'};
+
+    const prompt = `You are a senior credit analyst at a Kenyan financial institution. Write a professional, structured credit assessment report for a loan applicant based on the data below. 
+
+APPLICANT DATA:
+- Monthly net income: KES ${Math.round(d.monthlyIncome).toLocaleString()}
+- Annual income: KES ${Math.round(d.annualIncome).toLocaleString()}
+- Employment: ${empLabels[d.employment]}, ${jobLabels[d.jobYears]} at current job
+- Existing monthly debt payments: KES ${Math.round(d.existingDebt).toLocaleString()}
+- Credit score: ${d.creditScore} / 850
+- Loan defaults history: ${d.defaults === 'no' ? 'None' : d.defaults === 'resolved' ? 'Previous default, now resolved' : 'Active default'}
+- Collateral: ${d.collateral === 'yes' ? 'Available' : 'None'}
+- Total assets/savings: KES ${Math.round(d.assets).toLocaleString()}
+- Number of dependants: ${d.dependants !== undefined ? d.dependants : 'Not specified'}
+
+LOAN REQUEST:
+- Amount: KES ${Math.round(d.loanAmt).toLocaleString()}
+- Purpose: ${purposeLabels[d.purpose]}
+- Term: ${d.termMonths} months
+- Interest rate: ${d.annualRate}% p.a.
+- Monthly payment: KES ${Math.round(d.monthlyPayment).toLocaleString()}
+- Total repayment: KES ${Math.round(d.totalRepayment).toLocaleString()}
+- Total interest: KES ${Math.round(d.totalInterest).toLocaleString()}
+
+ASSESSMENT RESULTS:
+- Creditworthiness score: ${d.score} / 100
+- Overall verdict: ${d.verdict}
+- Two-thirds rule: ${d.tfPassed ? 'PASSED' : 'FAILED'} — borrower retains KES ${Math.round(d.retained).toLocaleString()}/mo (minimum required: KES ${Math.round(d.oneThird).toLocaleString()})
+- Debt-to-income ratio: ${Math.round(d.dti * 100)}%
+- Loan-to-income ratio: ${d.lti.toFixed(1)}x
+- Net interest income for lender: KES ${Math.round(d.netIncome).toLocaleString()}
+- Net return on loan: ${d.roi.toFixed(1)}%
+
+Write a credit report with these sections using markdown headings (###):
+1. Executive Summary (2-3 sentences: verdict, score, key reason)
+2. Income & Affordability Analysis (two-thirds rule, DTI, disposable income)
+3. Credit Risk Assessment (credit score interpretation, default history, risk level)
+4. Loan Viability (loan-to-income, purpose suitability, term appropriateness)
+5. Lender Return Analysis (profitability, net income, return quality)
+6. Recommendation (clear approve/conditional/decline with specific conditions or reasons)
+7. Risk Mitigation Suggestions (2-3 practical steps the applicant can take to improve eligibility if declined or conditional)
+
+Keep the tone professional but clear. Use specific numbers from the data. Be direct and decisive in your recommendation.`;
+
+    // Show loading
+    const box = document.getElementById('ai_report_box');
+    const loading = document.getElementById('ai_loading');
+    const content = document.getElementById('ai_report_content');
+    const errEl = document.getElementById('ai_error');
+    const btn = document.getElementById('ai_btn');
+
+    box.style.display = 'block';
+    loading.style.display = 'flex';
+    content.style.display = 'none';
+    errEl.style.display = 'none';
+    btn.disabled = true;
+    btn.style.opacity = '0.6';
+
+    box.scrollIntoView({behavior:'smooth', block:'nearest'});
+
+    try {
+      const res = await fetch(
+        'https://api.groq.com/openai/v1/chat/completions',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + apiKey
+          },
+          body: JSON.stringify({
+            model: 'llama-3.3-70b-versatile',
+            temperature: 0.4,
+            max_tokens: 1200,
+            messages: [
+              {
+                role: 'system',
+                content: 'You are a senior credit analyst at a Kenyan financial institution. Write clear, structured, professional credit assessment reports using the applicant data provided. Always use specific numbers from the data. Be decisive in your recommendations.'
+              },
+              { role: 'user', content: prompt }
+            ]
+          })
+        }
+      );
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error?.message || 'API request failed (status ' + res.status + ')');
+      }
+
+      const data = await res.json();
+      const text = data.choices?.[0]?.message?.content || '';
+
+      if (!text) throw new Error('Empty response from Groq. Please try again.');
+
+      // Render markdown-ish output
+      let html = text
+        .replace(/^### (.+)$/gm, '<h3>$1</h3>')
+        .replace(/^## (.+)$/gm, '<h3>$1</h3>')
+        .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+        .replace(/\*(.+?)\*/g, '<em>$1</em>')
+        .replace(/^[-•] (.+)$/gm, '<li>$1</li>')
+        .replace(/(<li>.*<\/li>)/gs, '<ul>$1</ul>')
+        .split('\n\n').map(p => {
+          if (p.startsWith('<h3>') || p.startsWith('<ul>')) return p;
+          if (p.trim()) return '<p>' + p.trim() + '</p>';
+          return '';
+        }).join('');
+
+      loading.style.display = 'none';
+      content.innerHTML = html;
+      content.style.display = 'block';
+      btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px;"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg> Regenerate Report';
+      btn.disabled = false;
+      btn.style.opacity = '1';
+
+    } catch(e) {
+      loading.style.display = 'none';
+      errEl.style.display = 'block';
+      errEl.textContent = 'Error: ' + e.message;
+      btn.disabled = false;
+      btn.style.opacity = '1';
+    }
+  }
+</script>
+</body>
+</html>
